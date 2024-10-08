@@ -7,7 +7,7 @@ const config: HardhatUserConfig = {
   networks: {
     sepolia: {
       url: `${process.env.SEPOLIA_TESTNET_URI}${process.env.INFRA_API_KEY}`,
-      accounts: [`0x${process.env.MTMK_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.DEPLOYER_SIGNER_PRIVATE_KEY}`],
     },
     holesky: {
       url: `${process.env.HOLESKY_TESTNET_URI}${process.env.INFRA_API_KEY}`,
