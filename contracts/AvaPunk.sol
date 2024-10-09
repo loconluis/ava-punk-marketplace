@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import "./AvaPunkDNA.sol";
 
-contract MyToken is ERC721, ERC721Enumerable {
+contract AvaPunk is ERC721, ERC721Enumerable, AvaPunkDNA {
     uint256 private counter;
-    uint public maxSupply;
+    uint256 public maxSupply;
     mapping(uint256 => bool) private tokenMinted;
+    mapping(uint256 => uint256) public tokenDNA;
 
     constructor(uint256 _maxSupply) ERC721("AvaPunks", "AVAPKS") {
         maxSupply = _maxSupply;
@@ -17,9 +19,59 @@ contract MyToken is ERC721, ERC721Enumerable {
     function mint() public {
         uint256 current = counter;
         require(current < maxSupply, "Not AvaPunk Left :(");
+
+        tokenDNA[current] = deterministicPseudRandomDNA(current, msg.sender);
         _safeMint(msg.sender, current);
         tokenMinted[current] = true;
         counter = counter + 1;
+    }
+
+    function _baseURI() 
+			internal
+			pure
+			override
+			returns(string memory)
+    {
+			return "https://avataaars.io/";
+    }
+
+
+    function _paramsURI(uint256 _dna) internal view returns(string memory) {
+        string memory params;
+        params = string(abi.encodePacked(
+            "accessoriesType=",
+            getAccesoriesTypes(uint8(_dna)),
+            "&clotheColor=",
+            getClotheColor(uint8(_dna)),
+            "&clotheType=",
+            getClotheType(_dna),
+            "&eyeType=",
+            getEyeType(_dna),
+            "&eyebrowType=",
+            getEyeBrowType(_dna),
+            "&facialHairColor=",
+            getFacialHairColor(_dna),
+            "&facialHairType=",
+            getFacialHairType(_dna),
+            "&hairColor=",
+            getHairColor(_dna),
+            "&hatColor=",
+            getHatColor(_dna),
+            "&graphicType=",
+            getGraphicType(_dna),
+            "&mouthType=",
+            getMouthType(_dna),
+            "&skinColor=",
+            getSkinColor(_dna)
+        ));
+        return params;
+    }
+
+    function imageByDNA(uint256 _dna) public view returns (string memory) {
+        string memory baseURI = _baseURI();
+        string memory paramsURI = _paramsURI(_dna);
+
+        return string(abi.encodePacked(baseURI,"?", paramsURI));
     }
 
     // Override require
@@ -30,11 +82,15 @@ contract MyToken is ERC721, ERC721Enumerable {
         returns (string memory)
     {
         require(tokenMinted[tokenId] == true, "ERC721 Metadata for not existing query");
+        
+        uint256 dna = tokenDNA[tokenId];
+        string memory image = imageByDNA(dna);
+
         bytes memory dataURI = abi.encodePacked(
                 '{ "name": "AvaPunks #',
-                tokenId,
+                Strings.toString(tokenId),
                 '",  "description": "Ava Punks is a randominze of the library Avaatar", "image": "',
-                "//TODO calculate Image URL", 
+                image,
                 '"}'
             );
         return string(abi.encodePacked(
